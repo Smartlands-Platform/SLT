@@ -2,7 +2,7 @@ pragma solidity ^0.4.16;
 
 import "./Ownable.sol";
 
-contract StatesProbe is Ownable {
+contract CrowdsaleProbe is Ownable {
 
 // StateMachine <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     enum Stages {
@@ -15,10 +15,6 @@ contract StatesProbe is Ownable {
     uint public startTime = 0;
     Stages public stage = Stages.NotStarted;
 
-    function nextStage() internal {
-        stage = Stages(uint(stage) + 1);
-    }
-    
     modifier atStage(Stages _stage) {
         require(stage == _stage);
         _;
@@ -31,33 +27,46 @@ contract StatesProbe is Ownable {
     
     modifier transitionNext() {
         _;
-        nextStage();
+        stage = Stages(uint(stage) + 1);
     }
     
     modifier timedTransitions() {
         // if (stage == Stages.FirstIteration && now >= startTime + 30 days)
-        if (stage == Stages.FirstIteration && now >= startTime + 2 minutes)
-            nextStage();
         // if (stage == Stages.SecondIteration && now >= startTime + 45 days)
-        if (stage == Stages.SecondIteration && now >= startTime + 4 minutes)
-            nextStage();
+        require(stage > Stages.NotStarted);
+        uint diff = now - startTime;
+        if (diff >= 2 minutes && diff < 4 minutes && stage != Stages.SecondIteration) {
+            stage = Stages.SecondIteration;
+        } else if (diff >= 4 minutes && stage != Stages.Finished) {
+            stage = Stages.Finished;
+        }
         _;
     }
 // StateMachine >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
 
     function start() onlyOwner atStage(Stages.NotStarted) transitionNext {
         startTime = now;
-        lastStart++;
     }
     
-    uint public lastPay = 100;
-    uint public lastStart = 0;
-    
-    function ()
-    payable 
+    function () payable 
     timedTransitions 
     atStages(Stages.FirstIteration, Stages.SecondIteration) 
     {
-        lastPay = uint(stage);
+        lastpay = uint(stage); 
+    }
+    
+    uint public lastpay = 100;
+    uint public stageWithdrawal = 100;
+    
+    function safeWithdrawal ()
+    timedTransitions
+    atStage(Stages.Finished)
+    {
+        stageWithdrawal = uint(stage);
+    }
+    
+    function time() constant returns (uint _minutes) {
+        require(stage > Stages.NotStarted);
+        return (now - startTime) / 1 minutes;
     }
 }
