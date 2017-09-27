@@ -7,8 +7,9 @@ contract SmartlandsPresale is Destructible {
     SmartlandsToken public tokenReward;
     mapping(address => uint256) public balanceOf;
     
-    uint public price = 1 szabo; // 0.001 ether / 1000 (3 decimalUnits of token)
-    uint public period = 15 minutes;
+    uint public price = 1 szabo;            // 0.001 ether / 1000 (3 decimalUnits of token)
+    uint public salePeriod = 14 days;       // production 14 days, dev 15 minutes
+    uint public bonusRate = 1 ether;        // production 1 ether, dev 10 finney (0.01 ether)
     
     uint public totalAmountRaised = 0;
 
@@ -21,8 +22,8 @@ contract SmartlandsPresale is Destructible {
         Finished
     }
 
-    uint public startTime = 0; // temporary public
-    Stages public stage = Stages.NotStarted;
+    uint startTime = 0;                   // public for dev
+    Stages stage = Stages.NotStarted;     // public for dev
 
     modifier atStage (Stages _stage) {
         require(stage == _stage);
@@ -37,7 +38,7 @@ contract SmartlandsPresale is Destructible {
     modifier timedTransitions () {
         require(stage > Stages.NotStarted);
         uint diff = now - startTime;
-        if (diff >= period && stage != Stages.Finished) {
+        if (diff >= salePeriod && stage != Stages.Finished) {
             stage = Stages.Finished;
         }
         _;
@@ -55,7 +56,7 @@ contract SmartlandsPresale is Destructible {
     atStage(Stages.InProgress) 
     {
         uint amount = msg.value;
-        // require(amount >= 5 ether);
+        require(amount >= 5 * bonusRate);
         
         totalAmountRaised += amount;
         balanceOf[msg.sender] += amount;
@@ -65,23 +66,23 @@ contract SmartlandsPresale is Destructible {
     }
     
     function calculateBonus (uint _amount) internal constant returns (uint amount) {
-        if (_amount >= 5 ether && _amount < 10 ether) {
+        if (_amount >= 5 * bonusRate && _amount < 10 * bonusRate) {
             return _amount * 115 / 100;
-        } else if (_amount >= 10 ether && _amount < 20 ether) {
+        } else if (_amount >= 10 * bonusRate && _amount < 20 * bonusRate) {
             return _amount * 120 / 100;
-        } else if (_amount >= 20 ether && _amount < 50 ether) {
+        } else if (_amount >= 20 * bonusRate && _amount < 50 * bonusRate) {
             return _amount * 125 / 100;
-        } else if (_amount >= 50 ether && _amount < 100 ether) {
+        } else if (_amount >= 50 * bonusRate && _amount < 100 * bonusRate) {
             return _amount * 130 / 100;
-        } else if (_amount >= 100 ether && _amount < 300 ether) {
+        } else if (_amount >= 100 * bonusRate && _amount < 300 * bonusRate) {
             return _amount * 140 / 100;
-        } else if (_amount >= 300 ether && _amount < 1000 ether) {
+        } else if (_amount >= 300 * bonusRate && _amount < 1000 * bonusRate) {
             return _amount * 150 / 100;
-        } else if (_amount >= 1000 ether && _amount < 2000 ether) {
+        } else if (_amount >= 1000 * bonusRate && _amount < 2000 * bonusRate) {
             return _amount * 160 / 100;
-        } else if (_amount >= 2000 ether && _amount < 3000 ether) {
+        } else if (_amount >= 2000 * bonusRate && _amount < 3000 * bonusRate) {
             return _amount * 175 / 100;
-        } else if (_amount >= 3000 ether) {
+        } else if (_amount >= 3000 * bonusRate) {
             return _amount * 2;
         } else {
             return _amount;
@@ -98,9 +99,9 @@ contract SmartlandsPresale is Destructible {
     
     function minutesToEnd () constant returns (uint _time) {
         require(stage > Stages.NotStarted && stage < Stages.Finished);
-        uint endTime = startTime + period;
+        uint endTime = startTime + salePeriod;
         uint toEndTime = endTime - now;
-        return toEndTime < period ? toEndTime / 1 minutes : 0;
+        return toEndTime <= salePeriod ? toEndTime / 1 minutes : 0;
     }
     
     function amountLeft () constant returns (uint _balance) {
